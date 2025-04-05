@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Домино с Ботом и Таймером</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to right, #000000, #ffffff);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: rgb(255, 255, 255);
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        }
+
+        .game-container {
+            text-align: center;
+            border-radius: 15px;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            width: 80%;
+            max-width: 900px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 36px;
+            color: #000000;
+        }
+
+        .player-turn {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .game-board {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            min-height: 100px;
+            flex-wrap: wrap;
+        }
+
+        .domino {
+            width: 60px;
+            height: 120px;
+            background-color: #000000;
+            border: 2px solid #333;
+            margin: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .domino:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .hand {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .message {
+            font-size: 20px;
+            margin-top: 10px;
+        }
+
+        .shop {
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            background-color: #000000;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 30px;
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        }
+
+        button:hover {
+            background-color: #5d5d5d;
+        }
+
+        .shop button {
+            margin-top: 10px;
+        }
+
+        #buyButton {
+            background-color: #28a745;
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        }
+
+        #buyButton:hover {
+            background-color: #218838;
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        }
+
+        #stopButton {
+            background-color: #dc3545;
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        }
+
+        #stopButton:hover {
+            background-color: #c82333;
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        }
+
+        #timer {
+            font-size: 30px;
+            margin-top: 20px;
+            color: #949292;
+            font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1>Домино с Ботом и Таймером</h1>
+    <div class="player-turn" id="playerTurn">Ваш ход!</div>
+    <div class="game-board" id="gameBoard"></div>
+    <div class="hand" id="playerHand"></div>
+    <div class="message" id="message"></div>
+    <div id="timer">Таймер: 30</div>
+
+    <div class="shop">
+        <h3>Базар</h3>
+        <button id="buyButton" onclick="buyDomino()">Купить фишку (10 очков)</button>
+        <button id="stopButton" onclick="endTurn()">Закончить ход</button>
+    </div>
+
+    <button onclick="startNewGame()">Начать новую игру</button>
+</div>
+
+<!-- Звуковые эффекты -->
+<audio id="dominoSound" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
+<audio id="victorySound" src="https://www.soundjay.com/button/beep-09.wav" preload="auto"></audio>
+<audio id="botMoveSound" src="https://www.soundjay.com/button/beep-06.wav" preload="auto"></audio>
+<audio id="buySound" src="https://www.soundjay.com/button/beep-10.wav" preload="auto"></audio>
+
+<script>
+    const allDominoes = [
+        [0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6],
+        [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6],
+        [2, 2], [2, 3], [2, 4], [2, 5], [2, 6],
+        [3, 3], [3, 4], [3, 5], [3, 6],
+        [4, 4], [4, 5], [4, 6],
+        [5, 5], [5, 6],
+        [6, 6]
+    ];
+
+    let playerTurn = true;
+    let playerPoints = 50;
+    let board = [];
+    let playerHand = [];
+    let botHand = [];
+    let remainingDominoes = [...allDominoes];
+    let timerValue = 30;
+    let timerInterval;
+    let isGameActive = false;
+
+    function startNewGame() {
+        playerTurn = true;
+        playerPoints = 50;
+        board = [];
+        playerHand = [];
+        botHand = [];
+        remainingDominoes = [...allDominoes];
+        timerValue = 30;
+
+        for (let i = 0; i < 7; i++) {
+            playerHand.push(randomDomino());
+            botHand.push(randomDomino());
+        }
+
+        document.getElementById('playerTurn').textContent = "Ваш ход!";
+        document.getElementById('message').textContent = '';
+        document.getElementById('timer').textContent = "Таймер: " + timerValue;
+        renderGame();
+
+        if (isGameActive) clearInterval(timerInterval);
+        startTimer();
+        isGameActive = true;
+    }
+
+    function renderGame() {
+        const gameBoard = document.getElementById('gameBoard');
+        gameBoard.innerHTML = '';
+
+        board.forEach(domino => {
+            const dominoElement = document.createElement('div');
+            dominoElement.classList.add('domino');
+            dominoElement.textContent = `${domino[0]} | ${domino[1]}`;
+            gameBoard.appendChild(dominoElement);
+        });
+
+        const playerHandDiv = document.getElementById('playerHand');
+        playerHandDiv.innerHTML = '';
+        playerHand.forEach(domino => {
+            const dominoElement = document.createElement('div');
+            dominoElement.classList.add('domino');
+            dominoElement.textContent = `${domino[0]} | ${domino[1]}`;
+            dominoElement.onclick = () => playerPlayTurn(domino);
+            playerHandDiv.appendChild(dominoElement);
+        });
+
+        document.getElementById('message').textContent = `Очки: ${playerPoints}`;
+    }
+
+    function randomDomino() {
+        const index = Math.floor(Math.random() * remainingDominoes.length);
+        const domino = remainingDominoes.splice(index, 1)[0];
+        return domino;
+    }
+
+    function playerPlayTurn(domino) {
+        if (board.length === 0 || domino[0] === board[0][0] || domino[1] === board[board.length - 1][1]) {
+            board.push(domino);
+            playerHand = playerHand.filter(d => d !== domino);
+            playSound('dominoSound');
+            updateTurn();
+            checkGameEnd();
+        }
+    }
+
+    function botPlayTurn() {
+        let chosenDomino = null;
+        for (let i = 0; i < botHand.length; i++) {
+            if (board.length === 0 || botHand[i][0] === board[0][0] || botHand[i][1] === board[board.length - 1][1]) {
+                chosenDomino = botHand[i];
+                break;
+            }
+        }
+
+        if (chosenDomino) {
+            board.push(chosenDomino);
+            botHand = botHand.filter(d => d !== chosenDomino);
+            playSound('botMoveSound');
+        }
+
+        updateTurn();
+        checkGameEnd();
+    }
+
+    function updateTurn() {
+        playerTurn = !playerTurn;
+        document.getElementById('playerTurn').textContent = playerTurn ? "Ваш ход!" : "Ход бота...";
+        renderGame();
+
+        if (!playerTurn) {
+            setTimeout(() => {
+                botPlayTurn();
+                document.getElementById('playerTurn').textContent = "Ваш ход!";
+            }, 1000);
+        }
+    }
+
+    function checkGameEnd() {
+        if (playerHand.length === 0) {
+            playSound('victorySound');
+            document.getElementById('message').textContent = "Поздравляем! Вы победили!";
+            isGameActive = false;
+        } else if (botHand.length === 0) {
+            document.getElementById('message').textContent = "Бот победил! Попробуйте снова.";
+            isGameActive = false;
+        }
+    }
+
+    function buyDomino() {
+        if (playerPoints >= 10 && remainingDominoes.length > 0) {
+            const newDomino = randomDomino();
+            playerHand.push(newDomino);
+            playerPoints -= 10;
+            playSound('buySound');
+            renderGame();
+        } else {
+            alert("Недостаточно очков для покупки!");
+        }
+    }
+
+    function endTurn() {
+        updateTurn();
+    }
+
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            if (timerValue > 0) {
+                timerValue--;
+                document.getElementById('timer').textContent = "Таймер: " + timerValue;
+            } else {
+                alert("Время вышло!");
+                endTurn();
+            }
+        }, 1000);
+    }
+
+    function playSound(soundId) {
+        document.getElementById(soundId).play();
+    }
+
+    startNewGame();
+</script>
+
+</body>
+</html>
